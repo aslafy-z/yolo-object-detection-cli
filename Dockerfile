@@ -13,6 +13,9 @@ ADD https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.ttf \
 
 WORKDIR /app
 
+ADD https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt \
+    /app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
