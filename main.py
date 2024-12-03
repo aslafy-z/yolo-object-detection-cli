@@ -298,7 +298,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                 </script>
             </body>
             </html>
-            """.replace('$WEBSOCKET_ENDPOINT', 'ws://%s:%d/ws' % (args.http_host, args.http_port))
+            """.replace('$WEBSOCKET_ENDPOINT', 'ws://%s:%d%sws' % (args.http_host, args.http_port, args.http_root))
             return HTMLResponse(content=html_content, status_code=200)
         config = uvicorn.Config(app, args.http_host, args.http_port)
         self.server = uvicorn.Server(config)
@@ -395,6 +395,8 @@ def parse_args():
                         help='HTTP server host')
     parser.add_argument('--http-port', type=int, default=8000,
                         help='HTTP server port')
+    parser.add_argument('--http-root', type=str, default='/',
+                        help='HTTP root')
     return parser.parse_args()
 
 async def run():
