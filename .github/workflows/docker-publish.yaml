@@ -39,10 +39,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      # Workaround "no space left on device"
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@v1.3.1
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
