@@ -1,5 +1,5 @@
 # See https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+FROM nvcr.io/nvidia/pytorch:24.11-py3
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
