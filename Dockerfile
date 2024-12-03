@@ -1,5 +1,9 @@
 # See https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile
 FROM bitnami/pytorch:2
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
