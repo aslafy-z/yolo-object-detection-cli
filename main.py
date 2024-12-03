@@ -232,7 +232,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                     </div>
                 </div>
                 <script>
-                    const ws = new WebSocket('$WEBSOCKET_ENDPOINT');
+                    const ws = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + window.location.pathname.replace(/\/$/, "") + "/ws");
                     let messageCount = 0;
                     let startTime = Date.now();
 
@@ -298,7 +298,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                 </script>
             </body>
             </html>
-            """.replace('$WEBSOCKET_ENDPOINT', 'ws://%s:%d%sws' % (args.http_host, args.http_port, args.http_root))
+            """
             return HTMLResponse(content=html_content, status_code=200)
         config = uvicorn.Config(app, args.http_host, args.http_port)
         self.server = uvicorn.Server(config)
