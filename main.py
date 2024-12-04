@@ -132,7 +132,7 @@ class VideoSource:
                 return False, None
 
     def release(self):
-        if self.type != 'image':
+        if self.gen and hasattr(self.gen, 'close'):
             self.gen.close()
 
 class OutputHandler(ABC):
@@ -194,7 +194,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                     self.active_connections.remove(websocket)
         @app.get("/", response_class=HTMLResponse)
         async def root_endpoint():
-            html_content = """
+            html_content = r'''
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -298,7 +298,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                 </script>
             </body>
             </html>
-            """
+            '''
             return HTMLResponse(content=html_content, status_code=200)
         config = uvicorn.Config(app, args.http_host, args.http_port)
         self.server = uvicorn.Server(config)
