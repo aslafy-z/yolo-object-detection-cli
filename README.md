@@ -9,7 +9,7 @@ git clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
 docker pull ghcr.io/aslafy-z/yolo-object-detection-cli:pr-13
 docker run -it --ipc=host --runtime=nvidia --rm \
   -v $PWD/samples/data:/samples \
-  -p 8000:8000
+  -p 8000:8000 \
   ghcr.io/aslafy-z/yolo-object-detection-cli:pr-13 \
   --source=/samples/shop.mp4
 ```
