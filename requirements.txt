@@ -1,8 +1,7 @@
 uvicorn[standard]==0.32.1
-fastapi==0.115.5
+fastapi==0.103.2 # Or clashes with typing-extensions versions
 opencv-python==4.10.0.84
 numpy==1.23.5
 paho-mqtt==2.1.0
 ultralytics==8.3.48
 lapx==0.5.11
-typing-extensions==4.4.0
