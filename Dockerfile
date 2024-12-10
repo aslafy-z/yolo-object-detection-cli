@@ -1,5 +1,5 @@
 # See https://docs.ultralytics.com/guides/nvidia-jetson/#quick-start-with-docker
-FROM ultralytics/ultralytics:latest-jetson-jetpack5
+FROM ultralytics/ultralytics:latest-jetson-jetpack5@sha256:6be6ac978c906ef09f64eda39ca7512ce740fda009524610fb3c33ce8d4a1d7d
 
 # Add dependencies for OpenCV
 ## USER root
