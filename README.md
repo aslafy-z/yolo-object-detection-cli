@@ -6,10 +6,11 @@
 
 ```shell
 git clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
-docker pull ghcr.io/aslafy-z/yolo-object-detection-cli:pr-13
+docker pull ghcr.io/aslafy-z/yolo-object-detection-cli:latest
 docker run -it --rm \
   -v $PWD/samples/data:/samples \
-  ghcr.io/aslafy-z/yolo-object-detection-cli:pr-13 \
+  -p 8000:8000
+  ghcr.io/aslafy-z/yolo-object-detection-cli:latest \
   --source=/samples/shop.mp4
 ```
 
