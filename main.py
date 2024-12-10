@@ -17,6 +17,7 @@ from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 from ultralytics.data import load_inference_source
 from ultralytics.data.utils import IMG_FORMATS
+import torch
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
@@ -57,6 +58,7 @@ class Frame:
 
 class DetectionModel:
     def __init__(self, model_path):
+        logging.info(f"Cuda is available: {torch.cuda.is_available()}")
         self.track_history = defaultdict(lambda: [])
         try:
             self.model = YOLO(model_path)
