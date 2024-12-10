@@ -1,19 +1,7 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
-import cv2
-import numpy as np
-import uvicorn
-from contextlib import asynccontextmanager
-
 from abc import ABC, abstractmethod
-import paho.mqtt.client as mqtt
 import json
 import base64
 from pathlib import Path
-from ultralytics import YOLO
-from ultralytics.utils.plotting import colors
-from ultralytics.data import load_inference_source
-from ultralytics.data.utils import IMG_FORMATS
 import logging
 import time
 import argparse
@@ -23,11 +11,19 @@ import dataclasses
 from typing import List, Tuple, Any
 from collections import defaultdict
 
-class EnhancedJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
-        return super().default(o)
+import cv2
+import numpy as np
+from ultralytics import YOLO
+from ultralytics.utils.plotting import colors
+from ultralytics.data import load_inference_source
+from ultralytics.data.utils import IMG_FORMATS
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+import uvicorn
+from contextlib import asynccontextmanager
+
+import paho.mqtt.client as mqtt
 
 
 logging.basicConfig(
@@ -37,6 +33,12 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
 
 @dataclasses.dataclass
 class Detection:
@@ -407,5 +409,6 @@ async def run():
         await app.run()
     except asyncio.CancelledError:
         await app.stop()
+
 if __name__ == "__main__":
     asyncio.run(run())
