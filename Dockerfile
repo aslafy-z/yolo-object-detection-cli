@@ -1,29 +1,22 @@
-# See https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile
-FROM bitnami/pytorch:2
+ARG TARGETARCH=${TARGETARCH:-amd64}
 
-# Add dependencies for OpenCV
-USER root
-RUN install_packages ffmpeg libsm6 libxext6
-USER 1001
+# Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-cpu
+FROM ultralytics/ultralytics:latest-cpu@sha256:d24ce7bbc999e4733c89f089e7a4987dcb1444eb228792f668ad654afb006a4f AS base_amd64
+# Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-jetson-jetpack5
+FROM ultralytics/ultralytics:latest-jetson-jetpack5@sha256:6be6ac978c906ef09f64eda39ca7512ce740fda009524610fb3c33ce8d4a1d7d AS base_arm64
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_BREAK_SYSTEM_PACKAGES=1 \
-    MKL_THREADING_LAYER=GNU \
-    OMP_NUM_THREADS=1
+FROM base_${TARGETARCH} AS final
 
-ADD https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.ttf \
-    https://github.com/ultralytics/assets/releases/download/v0.0.0/Arial.Unicode.ttf \
-    /usr/share/fonts/truetype/
+WORKDIR /app/weights
+
+RUN ln -fs /ultralytics/yolo11n.pt yolo11n.pt
 
 WORKDIR /app
 
-ADD https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt \
-    /app
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system -r requirements.txt
 
 COPY . .
-ENTRYPOINT ["python", "main.py"]
+
+EXPOSE 8000
+ENTRYPOINT ["python", "main.py", "--http-host", "0.0.0.0", "--http-port", "8000"]
