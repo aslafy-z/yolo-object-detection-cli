@@ -1,10 +1,10 @@
-# See https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile
-FROM bitnami/pytorch:2
+# See https://docs.ultralytics.com/guides/nvidia-jetson/#quick-start-with-docker
+FROM ultralytics/ultralytics:latest-jetson-jetpack5
 
 # Add dependencies for OpenCV
-USER root
-RUN install_packages ffmpeg libsm6 libxext6
-USER 1001
+## USER root
+## RUN install_packages ffmpeg libsm6 libxext6
+## USER 1001
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
