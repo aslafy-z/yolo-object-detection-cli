@@ -60,7 +60,10 @@ class DetectionModel:
         self.track_history = defaultdict(lambda: [])
         try:
             self.model = YOLO(model_path)
-            logging.info(f"Loaded {model_path} model")
+            self.model.export(format="engine", device="dla:0", half=True)
+            exported_model = model_path.replace('.pt', '.engine')
+            self.model = YOLO(exported_model)
+            logging.info(f"Loaded {exported_model} model")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
             raise
