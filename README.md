@@ -21,8 +21,7 @@ docker run -it --rm \
 ```shell
 sudo apt update && sudo apt install -y ffmpeg libsm6 libxext6
 
-git clone https://github.com/aslafy-z/yolo-object-detection-cli
-cd ./yolo-object-detection-cli
+git clone https://github.com/aslafy-z/yolo-object-detection-cli && cd ./yolo-object-detection-cli
 git lfs clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
 
 python -m virtualenv venv
@@ -37,8 +36,8 @@ python main.py --source=samples/data/shop.mp4
 ### Lock dependencies
 
 ```shell
-poetry lock
-poetry export --without-hashes --format=requirements.txt > requirements.txt
+uv lock
+uv pip compile pyproject.toml -o requirements.txt
 ```
 
 > Note: Docker image uses a subset of the dependencies, see in `requirements.docker.txt`.
@@ -46,6 +45,6 @@ poetry export --without-hashes --format=requirements.txt > requirements.txt
 ### Run
 
 ```shell
-poetry install
-poetry run python main.py --source=samples/data/shop.mp4
+git lfs clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
+uv run main.py --source=samples/data/shop.mp4
 ```
