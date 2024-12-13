@@ -10,6 +10,8 @@ FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-jetson-jetpack5 AS base_arm6
 
 FROM base_${TARGETARCH} AS final
 
+ARG TARGETARCH
+
 WORKDIR /app/weights
 
 RUN ln -fs /ultralytics/yolo11n.pt yolo11n.pt
