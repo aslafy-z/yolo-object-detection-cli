@@ -24,7 +24,7 @@ RUN uv pip install --system -r requirements.docker.txt
 # Workaround https://github.com/ultralytics/ultralytics/issues/17345
 RUN \
     if [ "$TARGETARCH" = "arm64" ]; then \
-        uv pip install --system torchvision==0.15.1; \
+        uv pip install --no-deps --system torchvision==0.15.1 filelock==3.16.1 jinja2==3.1.4; \
     fi
 
 COPY . .
