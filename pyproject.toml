@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "yolo-object-detection-cli"
+version = "0.0.0"
+description = ""
+authors = ["Zadkiel AHARONIAN <hello@zadkiel.fr>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.8"
+uvicorn = {version = "0.32.1", extras = ["standard"]}
+fastapi = "0.103.2" # Downgrade to support typing-extensions==4.5.0 requirements
+typing-extensions = "4.5.0" # Downgrade to support fastapi==0.103.2 and ultralytics==8.3.48 requirements
+opencv-python = "4.8.1.78" # Downgrade to match numpy==1.23.5 requirements
+numpy = "1.23.5"
+ultralytics = "8.3.48"
+lapx = "0.5.11"
+paho-mqtt = "2.1.0"
+scikit-image = "0.21.0"
+pytubefix = ">=6.5.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

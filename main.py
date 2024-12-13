@@ -12,13 +12,20 @@ from typing import List, Tuple, Any
 from collections import defaultdict
 
 import cv2
+from skimage import io as skimageio
+import threading
+from threading import Lock as ThreadLock
+
 import numpy as np
 from ultralytics import YOLO
 from ultralytics.utils.plotting import colors
 from ultralytics.data import load_inference_source
 from ultralytics.data.utils import IMG_FORMATS
+import torch
+
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from fastapi.responses import HTMLResponse
 import uvicorn
 from contextlib import asynccontextmanager
@@ -28,17 +35,17 @@ import paho.mqtt.client as mqtt
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
+
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
+
 
 @dataclasses.dataclass
 class Detection:
@@ -48,6 +55,7 @@ class Detection:
     confidence: float
     tracking_id: int
 
+
 @dataclasses.dataclass
 class Frame:
     original_image: np.ndarray
@@ -55,12 +63,18 @@ class Frame:
     detections: List[Detection]
     timestamp: float
 
+
 class DetectionModel:
-    def __init__(self, model_path):
+    def __init__(self, model: str, device: str):
+        logging.info(f"Cuda is available: {torch.cuda.is_available()}")
         self.track_history = defaultdict(lambda: [])
         try:
-            self.model = YOLO(model_path)
-            logging.info(f"Loaded {model_path} model")
+            self.model = YOLO(model)
+            if device != "cpu":
+                self.model.export(format="engine", device=device, half=True)
+                model = model.replace(".pt", ".engine")
+                self.model = YOLO(model)
+            logging.info(f"Loaded {model} model")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
             raise
@@ -85,7 +99,13 @@ class DetectionModel:
                     track.pop(0)
                 # draw the tracking line
                 points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                cv2.polylines(annotated_frame, [points], isClosed=False, color=colors(tracking_id, True), thickness=5)
+                cv2.polylines(
+                    annotated_frame,
+                    [points],
+                    isClosed=False,
+                    color=colors(tracking_id, True),
+                    thickness=5,
+                )
 
             detections.append(
                 Detection(
@@ -102,73 +122,151 @@ class DetectionModel:
     def get_class_name(self, class_id):
         return self.model.names[int(class_id)]
 
-class VideoSource:
-    def __init__(self, source: str, image_refresh_rate: int = 5):
+
+class ImageSource:
+    def __init__(self, source):
         self.source = source
-        self.image_refresh_rate = image_refresh_rate
-        self.last_refresh = 0
+        self.fps = None
+
+    def read(self):
+        logging.debug(f"Reading image frame from {self.source}")
+        try:
+            frame = skimageio.imread(self.source)
+            return True, frame.copy()
+        except:
+            return False, None
+
+    def close():
+        pass
+
+
+class VideoSource:
+    def __init__(self, source):
+        self.source = source
+        self.loader = load_inference_source(source)
+        self.gen = iter(self.loader)
+        self.fps = None
+
+    def read(self):
+        if hasattr(self.loader, "fps") and self.loader.fps:
+            self.fps = (
+                self.loader.fps[0]
+                if isinstance(self.loader.fps, list)
+                else self.loader.fps
+            )
+        logging.debug(f"Reading video frame from {self.source}")
+        try:
+            _, frames, _ = next(self.gen)
+            return True, frames[0].copy()
+        except StopIteration:
+            return False, None
+
+    def close(self):
+        if self.gen and hasattr(self.gen, "close"):
+            self.gen.close()
+
+
+class FrameSource:
+    def __init__(self, source: str, frame_interval: int):
+        if source.lower().endswith(tuple(["." + a for a in IMG_FORMATS])):
+            self.source = ImageSource(source)
+        else:
+            self.source = VideoSource(source)
+
+        self.frame_interval_seconds = frame_interval / 1000.0
+
+        self.last_capture_time = 0
+        self.last_return_time = 0
         self.current_frame = None
+        self.last_returned_frame = None
 
-        if source.lower().endswith(tuple(IMG_FORMATS)):
-            self.type = 'image'
-        else:
-            self.type = 'video'
-            print(source)
-            self.gen = iter(load_inference_source(source))
+        self.thread_lock = ThreadLock()
+        self.thread_should_stop = threading.Event()
+        self.thread = threading.Thread(
+            target=self._start_background_capture, daemon=True
+        )
+        self.thread.start()
 
-    def read(self) -> np.ndarray:
+    def _start_background_capture(self):
+        """
+        Continuously reads frames from the source at the original FPS.
+        """
+        while not self.thread_should_stop.is_set():
+            current_time = time.time()
+            # determine frame read interval based on video FPS
+            read_interval = (
+                1 / self.source.fps if self.source.fps else 0.033
+            )  # Default to ~30 FPS
+            # read a new frame if the interval has elapsed
+            if current_time - self.last_capture_time >= read_interval:
+                ret, frame = self.source.read()
+                if ret:
+                    with self.thread_lock:
+                        self.current_frame = frame
+                    self.last_capture_time = current_time
+            time.sleep(0.001)
+
+    def read(self) -> Tuple[bool, np.ndarray]:
+        """
+        Returns the current frame only if the user-defined refresh rate interval has elapsed.
+        If called before the interval is elapsed, it returns the previously returned frame.
+        """
         current_time = time.time()
-
-        if self.type == 'image':
-            logging.debug(f"Reading image from {self.source}")
-            if current_time - self.last_refresh >= self.image_refresh_rate:
-                self.current_frame = cv2.imread(self.source)
-                self.last_refresh = current_time
-            return True, self.current_frame.copy()
-        else:
-            logging.debug(f"Reading video frame from {self.source}")
-            try:
-                _, frames, _ = next(self.gen)
-                return True, frames[0]
-            except StopIteration:
-                return False, None
+        with self.thread_lock:
+            if current_time - self.last_return_time >= self.frame_interval_seconds:
+                # Enough time has passed; return the latest frame
+                self.last_returned_frame = self.current_frame
+                self.last_return_time = current_time
+                return True, self.last_returned_frame
+            else:
+                # Return the previous frame if interval hasn't elapsed
+                return True, (
+                    self.last_returned_frame
+                    if self.last_returned_frame is not None
+                    else self.current_frame
+                )
 
     def release(self):
-        if self.gen and hasattr(self.gen, 'close'):
-            self.gen.close()
+        self.thread_should_stop.set()
+        self.thread.join()
+        self.source.close()
+
 
 class OutputHandler(ABC):
     def __init__(self, _: argparse.Namespace):
         pass
+
     async def initialize(self):
         pass
+
     @abstractmethod
     async def publish(self, frame_data: str):
         pass
+
     async def terminate(self):
         pass
 
+
 class MQTTOutput(OutputHandler):
-    def __init__(self, args : argparse.Namespace):
+    def __init__(self, args: argparse.Namespace):
         self.client = mqtt.Client()
         self.topic = args.mqtt_topic
         self.client.connect(args.mqtt_host, args.mqtt_port, 60)
         self.client.loop_start()
 
     async def publish(self, frame: Frame):
-        message = {
-            "timestamp": frame.timestamp,
-            "detections": frame.detections
-        }
+        message = {"timestamp": frame.timestamp, "detections": frame.detections}
         self.client.publish(self.topic, json.dumps(message, cls=EnhancedJSONEncoder))
 
     async def terminate(self):
         self.client.loop_stop()
         self.client.disconnect()
 
+
 class ConsoleOutput(OutputHandler):
     async def initialize(self):
         logging.info("Console output initialized.")
+
     async def publish(self, frame: Frame):
         for d in frame.detections:
             logging.info(
@@ -179,24 +277,31 @@ class ConsoleOutput(OutputHandler):
                 f", BBox: [{d.bbox[0]}, {d.bbox[1]}, {d.bbox[2]}, {d.bbox[3]}]"
             )
 
+
 class FastAPIWebSocketOutput(OutputHandler):
-    def __init__(self, args : argparse.Namespace):
+    def __init__(self, args: argparse.Namespace):
         self.active_connections: List[WebSocket] = []
         app = FastAPI()
+
         @app.websocket("/ws")
-        async def websocket_endpoint(websocket: WebSocket):
-            await websocket.accept()
-            self.active_connections.append(websocket)
+        async def websocket_endpoint(connection: WebSocket):
+            await connection.accept()
+            self.active_connections.append(connection)
             try:
                 while True:
-                    await websocket.receive_text()
-                    await asyncio.sleep(0)
-            except WebSocketDisconnect:
-                if websocket in self.active_connections:
-                    self.active_connections.remove(websocket)
+                    await connection.receive_text()
+            except (
+                WebSocketDisconnect,
+                uvicorn.protocols.utils.ClientDisconnected,
+                ConnectionClosedError,
+                ConnectionClosedOK,
+            ):
+                if connection in self.active_connections:
+                    self.active_connections.remove(connection)
+
         @app.get("/", response_class=HTMLResponse)
         async def root_endpoint():
-            html_content = r'''
+            html_content = r"""
             <!DOCTYPE html>
             <html lang="en">
             <head>
@@ -300,45 +405,75 @@ class FastAPIWebSocketOutput(OutputHandler):
                 </script>
             </body>
             </html>
-            '''
+            """
             return HTMLResponse(content=html_content, status_code=200)
-        config = uvicorn.Config(app, args.http_host, args.http_port)
-        self.server = uvicorn.Server(config)
+
+        self.server = uvicorn.Server(
+            uvicorn.Config(
+                app,
+                host=args.http_host,
+                port=args.http_port,
+                # Important: use loop to ensure it works with asyncio
+                loop="asyncio",
+                # Disable lifespan to prevent blocking
+                lifespan="off",
+            )
+        )
 
     async def initialize(self):
+        asyncio.create_task(self._run_server())
+        await asyncio.sleep(0.1)
+
+    async def _run_server(self):
         await self.server.serve()
 
     async def publish(self, frame: Frame):
-        annotated_frame_data_b64 = base64.b64encode(cv2.imencode('.jpg', frame.annotated_image)[1].tobytes()).decode('utf-8')
-        message = json.dumps({
-            "timestamp": frame.timestamp,
-            "annotated_frame_data_b64": annotated_frame_data_b64,
-            "detections": frame.detections,
-        }, cls=EnhancedJSONEncoder)
+        annotated_frame_data_b64 = base64.b64encode(
+            cv2.imencode(".jpg", frame.annotated_image)[1].tobytes()
+        ).decode("utf-8")
+        message = json.dumps(
+            {
+                "timestamp": frame.timestamp,
+                "annotated_frame_data_b64": annotated_frame_data_b64,
+                "detections": frame.detections,
+            },
+            cls=EnhancedJSONEncoder,
+        )
+        disconnected_connections = []
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
-                await asyncio.sleep(0)
-            except WebSocketDisconnect:
-                if connection in self.active_connections:
-                    self.active_connections.remove(connection)
+            except (
+                WebSocketDisconnect,
+                uvicorn.protocols.utils.ClientDisconnected,
+                ConnectionClosedError,
+                ConnectionClosedOK,
+            ):
+                disconnected_connections.append(connection)
+        for connection in disconnected_connections:
+            self.active_connections.remove(connection)
 
     async def terminate(self):
+        for connection in self.active_connections:
+            await connection.close()
         self.active_connections.clear()
         # uvicorn handles ctrl+c signal, so we can ignore it
         pass
 
+
 class DetectionApp:
     def __init__(self, args):
-        self.model = DetectionModel(args.model)
-        self.source = VideoSource(args.source, args.image_refresh_rate)
+        self.model = DetectionModel(args.model, args.device)
+        self.source = FrameSource(args.source, args.frame_interval)
         self.args = args
         self.stop_processing: bool = False
         self.output_handlers: List[OutputHandler] = []
 
         self.output_handlers.append(ConsoleOutput(args))
-        if args.http: self.output_handlers.append(FastAPIWebSocketOutput(args))
-        if args.mqtt: self.output_handlers.append(MQTTOutput(args))
+        if args.http:
+            self.output_handlers.append(FastAPIWebSocketOutput(args))
+        if args.mqtt:
+            self.output_handlers.append(MQTTOutput(args))
 
     def process_frame(self, frame):
         model_detections, annotated_frame = self.model.detect(frame)
@@ -346,26 +481,31 @@ class DetectionApp:
             original_image=frame,
             annotated_image=annotated_frame,
             detections=model_detections,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
     async def process_frames(self):
+        previous_frame = None
         while not self.stop_processing:
-            # Read a single frame
-            logging.info("Reading frame.")
+            await asyncio.sleep(0)
             ret, original_frame = self.source.read()
             if not ret:
                 logging.info("No frame captured.")
                 return
+            if np.array_equal(previous_frame, original_frame):
+                continue
+            previous_frame = original_frame
             logging.info("Captured frame.")
 
             frame_data = self.process_frame(original_frame)
-            await asyncio.gather(*[handler.publish(frame_data) for handler in self.output_handlers])
-            await asyncio.sleep(0)
+            await asyncio.gather(
+                *[handler.publish(frame_data) for handler in self.output_handlers]
+            )
 
     async def run(self):
-        for handler in self.output_handlers:
-            asyncio.create_task(handler.initialize())
+        await asyncio.gather(
+            *[handler.initialize() for handler in self.output_handlers]
+        )
         await self.process_frames()
 
     async def stop(self):
@@ -375,40 +515,91 @@ class DetectionApp:
         self.output_handlers.clear()
         self.source.release()
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description='Object Detection Application')
-    parser.add_argument('--source', type=str, default='0',
-                        help='Source for detection: camera index, video file, image file, or URL')
-    parser.add_argument('--model', type=str, default="weights/yolo11n.pt",
-                        help='Path to model weights (.pt)')
-    parser.add_argument('--image-refresh-rate', type=int, default=5,
-                        help='Refresh rate in seconds for static images')
-    parser.add_argument('--mqtt', action='store_true',
-                        help='Enable MQTT publishing')
-    parser.add_argument('--mqtt-host', type=str, default='127.0.0.1',
-                        help='MQTT broker host')
-    parser.add_argument('--mqtt-port', type=int, default=1883,
-                        help='MQTT broker port')
-    parser.add_argument('--mqtt-topic', type=str, default='detections',
-                        help='MQTT broker port')
-    parser.add_argument('--http', action='store_true', default=True,
-                        help='Enable HTTP publishing')
-    parser.add_argument('--http-host', type=str, default='127.0.0.1',
-                        help='HTTP server host')
-    parser.add_argument('--http-port', type=int, default=8000,
-                        help='HTTP server port')
-    parser.add_argument('--http-root', type=str, default='/',
-                        help='HTTP root')
+    parser = argparse.ArgumentParser(description="Object Detection Application")
+    parser.add_argument(
+        "--source",
+        type=str,
+        default="0",
+        help="Source for detection (default: '0'). Use '0' for the default webcam, an index (e.g., '1') for additional webcams, or specify a path to a video/image file or URL.",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="weights/yolo11n.pt",
+        help="Path to model weights (.pt) file (default: 'weights/yolo11n.pt'). The model will be automatically downloaded if not found.",
+    )
+    parser.add_argument(
+        "--frame-interval",
+        type=int,
+        default=0,
+        help="Minimum interval between consecutive frame outputs in milliseconds (default: 0 for no limit).",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        help="Device for computation (default: 'cpu'). Options: 'cpu', 'cuda', 'cuda:0' (specific GPU), 'dla', or 'dla:0' (specific DLA).",
+    )
+    parser.add_argument(
+        "--mqtt",
+        action="store_true",
+        help="Enable MQTT publishing (default: disabled).",
+    )
+    parser.add_argument(
+        "--mqtt-host",
+        type=str,
+        default="127.0.0.1",
+        help="MQTT broker host (default: '127.0.0.1').",
+    )
+    parser.add_argument(
+        "--mqtt-port", type=int, default=1883, help="MQTT broker port (default: 1883)."
+    )
+    parser.add_argument(
+        "--mqtt-topic",
+        type=str,
+        default="detections",
+        help="MQTT topic to publish detections (default: 'detections').",
+    )
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        default=True,
+        help="Enable HTTP publishing (default: enabled).",
+    )
+    parser.add_argument(
+        "--http-host",
+        type=str,
+        default="127.0.0.1",
+        help="HTTP server host (default: '127.0.0.1').",
+    )
+    parser.add_argument(
+        "--http-port", type=int, default=8000, help="HTTP server port (default: 8000)."
+    )
+    parser.add_argument(
+        "--http-root", type=str, default="/", help="HTTP root path (default: '/')."
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help="Logging level (default: 'INFO'). Options: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
+    )
     return parser.parse_args()
+
 
 async def run():
     args = parse_args()
+    logging.getLogger().setLevel(logging.getLevelName(args.log_level.upper()))
+
     app = DetectionApp(args)
 
     try:
         await app.run()
     except asyncio.CancelledError:
         await app.stop()
+
 
 if __name__ == "__main__":
     asyncio.run(run())
