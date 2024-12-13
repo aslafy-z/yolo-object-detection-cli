@@ -13,15 +13,14 @@ on:
     branches: [ main ]
     # Publish semver tags as releases.
     tags: [ 'v*' ]
-  pull_request_target:
+  pull_request:
     branches: [ main ]
 
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository_owner }}/yolo-object-detection-cli
-
+  IMAGE_NAME: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
 jobs:
   build:
@@ -65,10 +64,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch,pattern=main,enable=true
-            type=ref,event=branch,pattern=main,format=latest
+            # Tag as latest only on the main branch
+            type=ref,event=branch,pattern=main,enable=true,format=latest
+            # Semantic version tags for versioned pushes
             type=semver,pattern={{version}}
-            type=raw,event=pull_request,value=pr-${{ github.event.pull_request.number }}
+            # Pull request builds tagged with pr-<PR_NUMBER>
+            type=raw,event=pull_request,enable=true,value=pr-${{ github.event.pull_request.number }}
 
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@v1.3.1
