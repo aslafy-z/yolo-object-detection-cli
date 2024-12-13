@@ -4,7 +4,7 @@ typing-extensions==4.5.0 # Downgrade to support fastapi and ultralytics requirem
 # Use opencv-python from base image
 # Use numpy from base image
 # Use ultralytics from base image
-lapx==0.5.11
+lapx==0.5.11.post1
 paho-mqtt==2.1.0
 scikit-image==0.21.0
 pytubefix>=6.5.2
