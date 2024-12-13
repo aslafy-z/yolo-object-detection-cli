@@ -4,9 +4,9 @@ ARG TARGETARCH=${TARGETARCH:-amd64}
 ARG ULTRALYTICS_VERSION=8.3.49
 
 # Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-cpu
-FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-cpu@sha256:d24ce7bbc999e4733c89f089e7a4987dcb1444eb228792f668ad654afb006a4f AS base_amd64
+FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-cpu AS base_amd64
 # Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-jetson-jetpack5
-FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-jetson-jetpack5@sha256:5ffea7f6e91c65944a5d8f58ae5918d5635f4da67010337d87f8dbed584b0c25 AS base_arm64
+FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-jetson-jetpack5 AS base_arm64
 
 FROM base_${TARGETARCH} AS final
 
