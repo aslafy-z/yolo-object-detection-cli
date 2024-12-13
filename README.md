@@ -4,9 +4,16 @@
 
 ### Docker
 
+Pull dependencies
+
 ```shell
-git clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
+git lfs clone https://github.com/aslafy-z/yolo-object-detection-samples ./samples
 docker pull ghcr.io/aslafy-z/yolo-object-detection-cli:main
+```
+
+Run with CPU support:
+
+```shell
 docker run -it --rm \
   -v $PWD/samples/data:/samples \
   -p 8000:8000 \
@@ -14,7 +21,17 @@ docker run -it --rm \
   --source=/samples/shop.mp4
 ```
 
-> Note: To run with the nvidia runtime, add `--ipc=host --gpus all` to the `docker run` command.
+Run with GPU support:
+
+```shell
+docker run -it --rm \
+  -v $PWD/samples/data:/samples \
+  -p 8000:8000 \
+  --ipc=host --gpus=all --runtime=nvidia --security-opt systempaths=unconfined \
+  ghcr.io/aslafy-z/yolo-object-detection-cli:main \
+  --source=/samples/shop.mp4 \
+  --device=cuda:0
+```
 
 ### System
 
