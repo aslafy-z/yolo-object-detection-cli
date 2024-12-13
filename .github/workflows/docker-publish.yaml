@@ -9,8 +9,6 @@ permissions:
   packages: write
 
 on:
-  schedule:
-    - cron: '22 11 * * *'
   push:
     branches: [ main ]
     # Publish semver tags as releases.
@@ -66,6 +64,11 @@ jobs:
         uses: docker/metadata-action@906ecf0fc0a80f9110f79d9e6c04b1080f4a2621
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch,pattern=main,enable=true
+            type=ref,event=branch,pattern=main,format=latest
+            type=semver,pattern={{version}}
+            type=ref,event=pull_request,format=pr-${{ github.event.pull_request.number }}
 
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@v1.3.1
