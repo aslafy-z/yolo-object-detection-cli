@@ -69,21 +69,25 @@ class DetectionModel:
     def __init__(self, model: str, model_dir: str, export_dir: str, device: str):
         logging.info(f"Cuda is available: {torch.cuda.is_available()}")
         self.track_history = defaultdict(lambda: [])
+
         try:
-            model_path = f"{model_dir}/{model}"
-            self.model = YOLO(model_path)
-            exported_model_path = f"{export_dir}/{model}.engine"
-            should_export = device != "cpu" and not Path(exported_model_path).exists()
-            if should_export:
-                path = self.model.export(format="engine", device=device, half=True)
+            is_gpu = device != "cpu"
+            model_path = Path(model_dir) / model
+            exported_model_path = Path(export_dir) / model_path.with_suffix('.engine').name
+
+            if is_gpu and not Path(exported_model_path).exists():
+                logging.info(f"Exporting model for GPU usage: {exported_model_path}")
+                temp_export_path = YOLO(model_path).export(
+                    format="engine", device=device, half=True
+                )
                 os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
-                shutil.move(path, exported_model_path)
-                model_path = exported_model_path
-                self.model = YOLO(model_path)
-            logging.info(f"Loaded {model_path} model")
+                shutil.move(temp_export_path, exported_model_path)
+
+            self.model = YOLO(exported_model_path if is_gpu else model_path)
+            logging.info(f"Successfully loaded model from {exported_model_path if is_gpu else model_path}")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
-            raise
+            raise RuntimeError(f"Error initializing YOLO model: {e}")
 
     def detect(self, frame) -> Tuple[List[Detection], np.ndarray]:
         results = self.model.track(source=frame, persist=True, verbose=False)[0]
@@ -604,8 +608,13 @@ def parse_args():
         default="INFO",
         help="Logging level (default: 'INFO'). Options: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
     )
-    return parser.parse_args()
-
+    args = parser.parse_args()
+    if args.device != "cpu" and not torch.cuda.is_available():
+        logging.warning(
+            "CUDA is not available. Falling back to CPU for computation."
+        )
+        args.device = "cpu"
+    return args
 
 async def run():
     args = parse_args()
