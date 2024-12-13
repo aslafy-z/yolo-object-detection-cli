@@ -19,6 +19,11 @@ WORKDIR /app
 COPY requirements.docker.txt .
 RUN uv pip install --system -r requirements.docker.txt
 
+RUN \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        uv pip install --system torchvision==0.15 \
+    fi
+
 COPY . .
 
 EXPOSE 8000
