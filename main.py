@@ -538,8 +538,8 @@ def parse_args():
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",
-        help="Device for computation (default: 'cpu'). Options: 'cpu', 'cuda', 'cuda:0' (specific GPU), 'dla', or 'dla:0' (specific DLA).",
+        default=None,
+        help="Device for computation (default: auto). Options: 'cpu', 'cuda', 'cuda:0' (specific GPU), 'dla', or 'dla:0' (specific DLA).",
     )
     parser.add_argument(
         "--mqtt",
