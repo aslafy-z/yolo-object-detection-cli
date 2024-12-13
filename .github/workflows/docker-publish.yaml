@@ -64,12 +64,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Tag as latest only on the main branch
-            type=ref,event=branch,pattern=main,enable=true,format=latest
-            # Semantic version tags for versioned pushes
-            type=semver,pattern={{version}}
-            # Pull request builds tagged with pr-<PR_NUMBER>
-            type=raw,event=pull_request,enable=true,value=pr-${{ github.event.pull_request.number }}
+            type=semver,pattern={{version}},enable=true,priority=900
+            type=ref,event=branch,pattern=main,enable=true,format=latest,priority=600
+            type=raw,event=pull_request,enable=${{ github.event_name == 'pull_request' && github.event.pull_request != null }},value=pr-${{ github.event.pull_request.number }},priority=200
 
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@v1.3.1
