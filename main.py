@@ -64,19 +64,16 @@ class Frame:
 
 
 class DetectionModel:
-    def __init__(self, model: str, model_dir: str, export_dir: str, device: str):
+    def __init__(self, model: str, device: str):
         logging.info(f"Cuda is available: {torch.cuda.is_available()}")
         self.track_history = defaultdict(lambda: [])
         try:
-            model_path = f"{model_dir}/{model}"
-            self.model = YOLO(model_path)
-            exported_model_path = f"${export_dir}/${model}.engine"
-            should_export = device != "cpu" and not Path(exported_model_path).exists()
-            if should_export:
+            self.model = YOLO(model)
+            if device != "cpu":
                 self.model.export(format="engine", device=device, half=True)
-                self.model = YOLO(exported_model_path)
-                model_path = exported_model_path
-            logging.info(f"Loaded {model_path} model")
+                model = model.replace(".pt", ".engine")
+                self.model = YOLO(model)
+            logging.info(f"Loaded {model} model")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
             raise
@@ -465,7 +462,7 @@ class FastAPIWebSocketOutput(OutputHandler):
 
 class DetectionApp:
     def __init__(self, args):
-        self.model = DetectionModel(args.model, args.model_dir, args.export_dir, args.device)
+        self.model = DetectionModel(args.model, args.device)
         self.source = FrameSource(args.source, args.frame_interval)
         self.args = args
         self.stop_processing: bool = False
@@ -527,22 +524,10 @@ def parse_args():
         help="Source for detection (default: '0'). Use '0' for the default webcam, an index (e.g., '1') for additional webcams, or specify a path to a video/image file or URL.",
     )
     parser.add_argument(
-        "--model-dir",
-        type=str,
-        default="./weights",
-        help="Path to the directory containing the model weights file (default: './weights').",
-    )
-    parser.add_argument(
-        "--export-dir",
-        type=str,
-        default="./weights-optimized",
-        help="Path to export the optimized model engine file (default: './weights-optimized'). Used for GPU acceleration.",
-    )
-    parser.add_argument(
         "--model",
         type=str,
-        default="yolo11n.pt",
-        help="Path to the model weights file (default: 'yolo11n.pt'). Model will be downloaded if not found.",
+        default="weights/yolo11n.pt",
+        help="Path to model weights (.pt) file (default: 'weights/yolo11n.pt'). The model will be automatically downloaded if not found.",
     )
     parser.add_argument(
         "--frame-interval",
