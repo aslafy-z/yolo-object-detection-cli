@@ -14,7 +14,7 @@ docker run -it --rm \
   --source=/samples/shop.mp4
 ```
 
-> Note: To run with the nvidia runtime, add `--ipc=host --runtime=nvidia` to the `docker run` command.
+> Note: To run with the nvidia runtime, add `--ipc=host --gpus all` to the `docker run` command.
 
 ### System
 
