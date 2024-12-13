@@ -175,7 +175,7 @@ sympy==1.13.3
     # via torch
 tifffile==2023.7.10
     # via scikit-image
-torch==2.1.2
+torch==2.2.0
     # via
     #   torchvision
     #   ultralytics
