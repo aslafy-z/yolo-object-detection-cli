@@ -8,7 +8,7 @@ import argparse
 import asyncio
 import signal
 import dataclasses
-from typing import List, Tuple, Any
+from typing import List, Tuple
 from collections import defaultdict
 
 import cv2
@@ -28,7 +28,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from fastapi.responses import HTMLResponse
 import uvicorn
-from contextlib import asynccontextmanager
 
 import paho.mqtt.client as mqtt
 
