@@ -66,6 +66,7 @@ numpy==1.23.5
     #   imageio
     #   lapx
     #   matplotlib
+    #   onnx
     #   opencv-python
     #   pandas
     #   pywavelets
@@ -107,6 +108,10 @@ nvidia-nvjitlink-cu12==12.6.85
     #   nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105
     # via torch
+onnx==1.17.0
+    # via onnxslim
+onnxslim==0.1.43
+    # via yolo-object-detection-cli (pyproject.toml)
 opencv-python==4.8.1.78
     # via
     #   yolo-object-detection-cli (pyproject.toml)
@@ -115,6 +120,7 @@ packaging==24.2
     # via
     #   lazy-loader
     #   matplotlib
+    #   onnxslim
     #   scikit-image
 paho-mqtt==2.1.0
     # via yolo-object-detection-cli (pyproject.toml)
@@ -129,6 +135,8 @@ pillow==10.4.0
     #   scikit-image
     #   torchvision
     #   ultralytics
+protobuf==5.29.1
+    # via onnx
 psutil==6.1.0
     # via ultralytics
 py-cpuinfo==9.0.0
@@ -172,7 +180,9 @@ sniffio==1.3.1
 starlette==0.27.0
     # via fastapi
 sympy==1.13.3
-    # via torch
+    # via
+    #   onnxslim
+    #   torch
 tifffile==2023.7.10
     # via scikit-image
 torch==2.1.2
