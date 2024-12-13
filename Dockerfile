@@ -13,8 +13,8 @@ RUN ln -fs /ultralytics/yolo11n.pt yolo11n.pt
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN uv pip install --system -r requirements.txt
+COPY requirements.docker.txt .
+RUN uv pip install --system -r requirements.docker.txt
 
 COPY . .
 

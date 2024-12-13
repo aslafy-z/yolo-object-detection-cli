@@ -41,6 +41,8 @@ poetry lock
 poetry export --without-hashes --format=requirements.txt > requirements.txt
 ```
 
+> Note: Docker image uses a subset of the dependencies, see in `requirements.docker.txt`.
+
 ### Run
 
 ```shell
