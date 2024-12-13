@@ -10,6 +10,7 @@ import signal
 import dataclasses
 from typing import List, Tuple
 from collections import defaultdict
+import os
 
 import cv2
 from skimage import io as skimageio
@@ -70,10 +71,12 @@ class DetectionModel:
         try:
             model_path = f"{model_dir}/{model}"
             self.model = YOLO(model_path)
-            exported_model_path = f"${export_dir}/${model}.engine"
+            exported_model_path = f"{export_dir}/{model}.engine"
             should_export = device != "cpu" and not Path(exported_model_path).exists()
             if should_export:
-                self.model.export(format="engine", device=device, half=True)
+                path = self.model.export(format="engine", device=device, half=True)
+                os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
+                os.rename(path, exported_model_path)
                 self.model = YOLO(exported_model_path)
                 model_path = exported_model_path
             logging.info(f"Loaded {model_path} model")
