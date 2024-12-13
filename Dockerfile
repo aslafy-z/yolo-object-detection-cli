@@ -22,4 +22,4 @@ RUN uv pip install --system -r requirements.docker.txt
 COPY . .
 
 EXPOSE 8000
-ENTRYPOINT ["python", "main.py", "--http-host", "0.0.0.0", "--http-port", "8000"]
+ENTRYPOINT ["python3", "main.py", "--http-host", "0.0.0.0", "--http-port", "8000"]
