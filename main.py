@@ -11,6 +11,7 @@ import dataclasses
 from typing import List, Tuple
 from collections import defaultdict
 import os
+import shutil
 
 import cv2
 from skimage import io as skimageio
@@ -76,9 +77,9 @@ class DetectionModel:
             if should_export:
                 path = self.model.export(format="engine", device=device, half=True)
                 os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
-                os.rename(path, exported_model_path)
-                self.model = YOLO(exported_model_path)
+                shutil.move(path, exported_model_path)
                 model_path = exported_model_path
+                self.model = YOLO(model_path)
             logging.info(f"Loaded {model_path} model")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
