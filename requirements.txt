@@ -49,7 +49,7 @@ lazy-loader==0.4
     # via scikit-image
 markupsafe==2.1.5
     # via jinja2
-matplotlib==3.7.5
+matplotlib==3.10.0
     # via
     #   seaborn
     #   ultralytics
