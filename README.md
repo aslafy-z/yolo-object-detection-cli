@@ -27,7 +27,7 @@ Run with GPU support:
 docker run -it --rm \
   -v $PWD/samples/data:/samples \
   -p 8000:8000 \
-  --ipc=host --gpus=all --runtime=nvidia --security-opt systempaths=unconfined \
+  --ipc=host --gpus=all --runtime=nvidia \
   ghcr.io/aslafy-z/yolo-object-detection-cli:main \
   --source=/samples/shop.mp4 \
   --device=cuda:0
