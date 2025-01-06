@@ -21,12 +21,6 @@ WORKDIR /app
 COPY requirements.docker.txt .
 RUN uv pip install --system -r requirements.docker.txt
 
-# Workaround https://github.com/ultralytics/ultralytics/issues/17345
-RUN \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        uv pip install --system torchvision==0.15; \
-    fi
-
 COPY . .
 
 EXPOSE 8000
