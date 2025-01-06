@@ -1050,16 +1050,16 @@ wheels = [
 
 [[package]]
 name = "onnxslim"
-version = "0.1.43"
+version = "0.1.46"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "onnx" },
     { name = "packaging" },
     { name = "sympy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/42/d4/24a3e013bbac6293c00c4376f51c31933344d4fb39e9134a3329121e2d69/onnxslim-0.1.43.tar.gz", hash = "sha256:f4854e18723753bc87d483dfb10847121530924e4f8ccd90f128ae73aee435d7", size = 121003 }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/c2/13b1491d07bb2b4842c3b6f5a9fd6de522f5ebdfb24c22f96d4ade1b5235/onnxslim-0.1.46.tar.gz", hash = "sha256:f0a5b2442ef0baf3645f9ca8ed7741ccb9900211beb6ba3db194bd730248fb6d", size = 121005 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/67/3c8eae33c56237df0b089a05336196843244375b7b4034cc58c09b9f7021/onnxslim-0.1.43-py3-none-any.whl", hash = "sha256:892b9dcc99e212ec8bf4967572b8cf7d0d80eb0b7218f07c7f337beef6dfd06d", size = 142947 },
+    { url = "https://files.pythonhosted.org/packages/c7/04/3c0f043772d865d6db77f5b800bd96489b9b11174e64dbabce073bdeac82/onnxslim-0.1.46-py3-none-any.whl", hash = "sha256:3110b26572ddff54cb7662ed2eb5d56f64ef821c86a062d2bdd2d1ac7296dac9", size = 142627 },
 ]
 
 [[package]]
@@ -2060,7 +2060,7 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.103.2" },
     { name = "lapx", specifier = "==0.5.11" },
     { name = "numpy", specifier = "==1.23.5" },
-    { name = "onnxslim", specifier = "==0.1.43" },
+    { name = "onnxslim", specifier = "==0.1.46" },
     { name = "opencv-python", specifier = "==4.8.1.78" },
     { name = "paho-mqtt", specifier = "==2.1.0" },
     { name = "pytubefix", specifier = ">=6.5.2" },
