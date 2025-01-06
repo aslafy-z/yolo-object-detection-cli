@@ -1,7 +1,7 @@
 ARG TARGETARCH=${TARGETARCH:-amd64}
 
 # renovate: datasource=pypi depName=ultralytics
-ARG ULTRALYTICS_VERSION=8.3.49
+ARG ULTRALYTICS_VERSION=8.3.58
 
 # Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-cpu
 FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-cpu AS base_amd64

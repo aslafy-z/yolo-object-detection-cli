@@ -15,7 +15,7 @@ dependencies = [
     "typing-extensions==4.5.0", # Downgrade to support fastapi and ultralytics requirements
     "opencv-python==4.8.1.78",  # Downgrade to match numpy requirements
     "numpy==1.23.5",
-    "ultralytics==8.3.49",
+    "ultralytics==8.3.58",
     "lapx==0.5.11",
     "paho-mqtt==2.1.0",
     "scikit-image==0.21.0",

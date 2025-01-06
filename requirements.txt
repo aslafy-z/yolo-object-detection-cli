@@ -206,7 +206,7 @@ typing-extensions==4.5.0
     #   uvicorn
 tzdata==2024.2
     # via pandas
-ultralytics==8.3.49
+ultralytics==8.3.58
     # via yolo-object-detection-cli (pyproject.toml)
 ultralytics-thop==2.0.13
     # via ultralytics
