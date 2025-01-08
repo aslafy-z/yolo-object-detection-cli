@@ -7,9 +7,10 @@ ARG ULTRALYTICS_VERSION=8.3.58
 FROM ttl.sh/ultralytics-ultralytics-8.3.58-cpu-b31636057de36b92d2dddc93916da198f46c533331e563de167d98afbedc5e17:1d AS base_amd64
 # Source at https://github.com/ultralytics/ultralytics/blob/main/docker/Dockerfile-jetson-jetpack5
 FROM ultralytics/ultralytics:${ULTRALYTICS_VERSION}-jetson-jetpack5 AS base_arm64
+FROM dustynv/l4t-pytorch:r35.4.1 AS base_arm64
 
 FROM base_${TARGETARCH} AS final
-
+RUN strings /lib/*/libstdc++.so.* | grep GLIBCXX
 ARG TARGETARCH
 
 WORKDIR /app/weights
