@@ -23,7 +23,7 @@ RUN uv pip install --system -r requirements.docker.txt
 RUN uv pip freeze --system
 RUN ldconfig -p
 RUN ldd --version
-RUN strings /usr/lib*/libstdc++.so.* | grep GLIBCXX
+RUN strings /lib/*/libstdc++.so.* | grep GLIBCXX
 COPY . .
 
 EXPOSE 8000
