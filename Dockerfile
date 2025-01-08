@@ -20,7 +20,7 @@ WORKDIR /app
 
 COPY requirements.docker.txt .
 RUN uv pip install --system -r requirements.docker.txt
-
+RUN uv pip freeze --system
 COPY . .
 
 EXPOSE 8000
