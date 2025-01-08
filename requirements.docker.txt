@@ -9,3 +9,4 @@ paho-mqtt==2.1.0
 scikit-image==0.21.0
 pytubefix>=6.5.2
 onnxslim==0.1.46
+unhandled-exit==1.0.0

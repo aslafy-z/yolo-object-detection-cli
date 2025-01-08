@@ -17,6 +17,7 @@ import cv2
 from skimage import io as skimageio
 import threading
 from threading import Lock as ThreadLock
+import unhandled_exit
 
 import numpy as np
 from ultralytics import YOLO
@@ -33,12 +34,27 @@ import uvicorn
 
 import paho.mqtt.client as mqtt
 
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["console"],
+    },
+}
+logging.config.dictConfig(LOGGING_CONFIG)
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -153,11 +169,20 @@ class ImageSource:
 class VideoSource:
     def __init__(self, source):
         self.source = source
-        self.loader = load_inference_source(source)
-        self.gen = iter(self.loader)
+        self.loader = None
+        self._initialized = False
+        self.gen = None
         self.fps = None
 
     def read(self):
+        # Lazy initialization
+        if not self._initialized:
+            logging.info(f"Video source is initializing")
+            self.loader = load_inference_source(self.source)
+            self.gen = iter(self.loader)
+            self._initialized = True
+            logging.info(f"Video source is initialized")
+        # Save FPS if available
         if hasattr(self.loader, "fps") and self.loader.fps:
             self.fps = (
                 self.loader.fps[0]
@@ -427,6 +452,7 @@ class FastAPIWebSocketOutput(OutputHandler):
                 loop="asyncio",
                 # Disable lifespan to prevent blocking
                 lifespan="off",
+                log_config=LOGGING_CONFIG,
             )
         )
 
@@ -616,17 +642,21 @@ def parse_args():
         args.device = "cpu"
     return args
 
-async def run():
+def main():
+    unhandled_exit.activate()
+
     args = parse_args()
-    logging.getLogger().setLevel(logging.getLevelName(args.log_level.upper()))
+    for logger_name in ["root", *logging.root.manager.loggerDict.keys()]:
+        logging.getLogger(logger_name).setLevel(logging.getLevelName(args.log_level.upper()))
 
-    app = DetectionApp(args)
+    async def run():
+        app = DetectionApp(args)
+        try:
+            await app.run()
+        except asyncio.CancelledError:
+            await app.stop()
 
-    try:
-        await app.run()
-    except asyncio.CancelledError:
-        await app.stop()
-
+    asyncio.run(run())
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()

@@ -1774,6 +1774,15 @@ wheels = [
 ]
 
 [[package]]
+name = "unhandled-exit"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/24/f80ef91968bdbb2398774646e7fada0e71cddd07d006c612f86e62bdac5c/unhandled_exit-1.0.0.tar.gz", hash = "sha256:935a4e752e98b2d76a0afba6b47c7a692231a08158a60e90df559985596f22fb", size = 4500 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/f4/c900d50aee7eead3170e0dd50a192d19f5df8ca7e0ece59b9f73a858215c/unhandled_exit-1.0.0-py3-none-any.whl", hash = "sha256:100df644ab9de07c7a33b4bd6553dcc14f42cdbf5de9a2cdb7e0dbe1c99850d8", size = 4086 },
+]
+
+[[package]]
 name = "urllib3"
 version = "2.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2052,6 +2061,7 @@ dependencies = [
     { name = "scikit-image" },
     { name = "typing-extensions" },
     { name = "ultralytics" },
+    { name = "unhandled-exit" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -2067,6 +2077,7 @@ requires-dist = [
     { name = "scikit-image", specifier = "==0.21.0" },
     { name = "typing-extensions", specifier = "==4.5.0" },
     { name = "ultralytics", specifier = "==8.3.58" },
+    { name = "unhandled-exit", specifier = ">=1.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.32.1" },
 ]
 
