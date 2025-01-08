@@ -21,6 +21,7 @@ WORKDIR /app
 COPY requirements.docker.txt .
 RUN uv pip install --system -r requirements.docker.txt
 RUN uv pip freeze --system
+RUN ldconfig -p
 COPY . .
 
 EXPOSE 8000
