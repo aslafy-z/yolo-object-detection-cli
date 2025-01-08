@@ -46,9 +46,16 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
 
+      # Login to Docker Hub for increased public repositories quotas
+      - name: Login to Docker Hub
+        uses: docker/login-action@7ca345011ac4304463197fac0e56eab1bc7e6af0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into GHCR registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@7ca345011ac4304463197fac0e56eab1bc7e6af0
         with:
