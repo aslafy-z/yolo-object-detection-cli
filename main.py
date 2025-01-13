@@ -26,13 +26,14 @@ from ultralytics.data import load_inference_source
 from ultralytics.data.utils import IMG_FORMATS
 import torch
 
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from fastapi.responses import HTMLResponse
 import uvicorn
 
+import ssl
 import paho.mqtt.client as mqtt
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -284,7 +285,31 @@ class OutputHandler(ABC):
 
 class MQTTOutput(OutputHandler):
     def __init__(self, args: argparse.Namespace):
-        self.client = mqtt.Client()
+        def _get_mqtt_version(version : str):
+            try:
+                return mqtt.MQTTProtocolVersion[version].value
+            except KeyError:
+                raise ValueError(f"Invalid MQTT version: '{version}'. Defaulting to client default.")
+        def _get_ssl_protocol(protocol: str):
+            try:
+                return getattr(ssl, f"PROTOCOL_{protocol}")
+            except AttributeError:
+                raise ValueError(f"Invalid SSL protocol: '{protocol}'. Defaulting to client default.")
+
+        self.client = mqtt.Client(
+            client_id=args.mqtt_client_id,
+            protocol=_get_mqtt_version(args.mqtt_protocol),
+        )
+        self.client.tls_set(
+            ca_certs=args.mqtt_tls_ca_cert,
+            certfile=args.mqtt_tls_client_cert,
+            keyfile=args.mqtt_tls_client_key,
+            keyfile_password=args.mqtt_tls_client_key_password,
+            cert_reqs=ssl.CERT_REQUIRED if args.mqtt_tls_ca_cert else ssl.CERT_NONE,
+            tls_version=_get_ssl_protocol(args.mqtt_tls_version),
+            ciphers=None,
+            alpn_protocols=[args.mqtt_tls_alpn_protocol],
+        )
         self.topic = args.mqtt_topic
         self.client.connect(args.mqtt_host, args.mqtt_port, 60)
         self.client.loop_start()
@@ -609,6 +634,54 @@ def parse_args():
         type=str,
         default="detections",
         help="MQTT topic to publish detections (default: 'detections').",
+    )
+    parser.add_argument(
+        "--mqtt-client-id",
+        type=str,
+        default=None,
+        help="MQTT client ID (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-protocol",
+        type=str,
+        default="MQTTv311",
+        help="MQTT protocol version (default: 'MQTTv311'). Options: 'MQTTv31', 'MQTTv311', 'MQTTv5'.",
+    )
+    parser.add_argument(
+        "--mqtt-tls-ca-cert",
+        type=str,
+        default=None,
+        help="Path to CA certificate file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-cert",
+        type=str,
+        default=None,
+        help="Path to client certificate file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-key",
+        type=str,
+        default=None,
+        help="Path to client key file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-key-password",
+        type=str,
+        default=None,
+        help="Password for client key file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-version",
+        type=str,
+        default="TLSv1_2",
+        help="TLS version for MQTT connection (default: 'TLSv1_2'). Options: 'TLSv1', 'TLSv1_1', 'TLSv1_2', 'TLSv1_3'.",
+    )
+    parser.add_argument(
+        "--mqtt-tls-alpn-protocol",
+        type=str,
+        default=None,
+        help="ALPN protocol for MQTT TLS connection (default: None).",
     )
     parser.add_argument(
         "--http",
