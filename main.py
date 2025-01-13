@@ -316,7 +316,7 @@ class MQTTOutput(OutputHandler):
             keyfile_password=args.mqtt_tls_client_key_password,
             cert_reqs=ssl.CERT_REQUIRED if args.mqtt_tls_ca_cert else ssl.CERT_NONE,
             tls_version=_get_ssl_protocol(args.mqtt_tls_version),
-            ciphers=None,
+            ciphers=None, # use defaults
             alpn_protocols=[args.mqtt_tls_alpn_protocol],
         )
         self.topic = args.mqtt_topic
