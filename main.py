@@ -324,7 +324,12 @@ class MQTTOutput(OutputHandler):
         if args.mqtt_username and args.mqtt_password:
             self.client.username_pw_set(args.mqtt_username, args.mqtt_password)
         self.topic = args.mqtt_topic
-        self.client.connect(args.mqtt_host, args.mqtt_port, 60)
+        status = self.client.connect(args.mqtt_host, args.mqtt_port, 60)
+        if status == 0:
+            logging.info(f"Connected to MQTT broker at {args.mqtt_host}:{args.mqtt_port}")
+        else:
+            logging.error(f"Failed to connect to MQTT broker: {status}")
+            raise RuntimeError(f"Failed to connect to MQTT broker: {status}")
         self.client.loop_start()
 
     async def publish(self, frame: Frame):
