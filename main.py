@@ -328,12 +328,16 @@ class MQTTOutput(OutputHandler):
         self.client.loop_start()
 
     async def publish(self, frame: Frame):
+        if not self.client.is_connected():
+            logging.warning("MQTT client is not connected.")
+            return
         message = {"timestamp": frame.timestamp, "detections": frame.detections}
         self.client.publish(self.topic, json.dumps(message, cls=EnhancedJSONEncoder))
 
     async def terminate(self):
+        if self.client.is_connected():
+            self.client.disconnect()
         self.client.loop_stop()
-        self.client.disconnect()
 
 
 class ConsoleOutput(OutputHandler):
