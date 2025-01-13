@@ -293,17 +293,19 @@ class MQTTOutput(OutputHandler):
             try:
                 return mqtt.MQTTProtocolVersion[version].value
             except KeyError:
-                raise ValueError(
+                logging.warning(
                     f"Invalid MQTT version: '{version}'. Defaulting to client default."
                 )
+                return None
 
         def _get_ssl_protocol(protocol: str):
             try:
                 return getattr(ssl, f"PROTOCOL_{protocol}")
             except AttributeError:
-                raise ValueError(
+                logging.warning(
                     f"Invalid SSL protocol: '{protocol}'. Defaulting to client default."
                 )
+                return None
 
         self.client = mqtt.Client(
             client_id=args.mqtt_client_id,
@@ -316,9 +318,11 @@ class MQTTOutput(OutputHandler):
             keyfile_password=args.mqtt_tls_client_key_password,
             cert_reqs=ssl.CERT_REQUIRED if args.mqtt_tls_ca_cert else ssl.CERT_NONE,
             tls_version=_get_ssl_protocol(args.mqtt_tls_version),
-            ciphers=None, # use defaults
+            ciphers=None,  # use defaults
             alpn_protocols=[args.mqtt_tls_alpn_protocol],
         )
+        if args.mqtt_username and args.mqtt_password:
+            self.client.username_pw_set(args.mqtt_username, args.mqtt_password)
         self.topic = args.mqtt_topic
         self.client.connect(args.mqtt_host, args.mqtt_port, 60)
         self.client.loop_start()
@@ -657,6 +661,18 @@ def parse_args():
         type=str,
         default="MQTTv311",
         help="MQTT protocol version (default: 'MQTTv311'). Options: 'MQTTv31', 'MQTTv311', 'MQTTv5'.",
+    )
+    parser.add_argument(
+        "--mqtt-username",
+        type=str,
+        default=None,
+        help="MQTT username (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-password",
+        type=str,
+        default=None,
+        help="MQTT password (default: None).",
     )
     parser.add_argument(
         "--mqtt-tls-ca-cert",
