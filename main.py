@@ -90,7 +90,9 @@ class DetectionModel:
         try:
             is_gpu = device != "cpu"
             model_path = Path(model_dir) / model
-            exported_model_path = Path(export_dir) / model_path.with_suffix('.engine').name
+            exported_model_path = (
+                Path(export_dir) / model_path.with_suffix(".engine").name
+            )
 
             if is_gpu and not Path(exported_model_path).exists():
                 logging.info(f"Exporting model for GPU usage: {exported_model_path}")
@@ -101,7 +103,9 @@ class DetectionModel:
                 shutil.move(temp_export_path, exported_model_path)
 
             self.model = YOLO(exported_model_path if is_gpu else model_path)
-            logging.info(f"Successfully loaded model from {exported_model_path if is_gpu else model_path}")
+            logging.info(
+                f"Successfully loaded model from {exported_model_path if is_gpu else model_path}"
+            )
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
             raise RuntimeError(f"Error initializing YOLO model: {e}")
@@ -285,16 +289,21 @@ class OutputHandler(ABC):
 
 class MQTTOutput(OutputHandler):
     def __init__(self, args: argparse.Namespace):
-        def _get_mqtt_version(version : str):
+        def _get_mqtt_version(version: str):
             try:
                 return mqtt.MQTTProtocolVersion[version].value
             except KeyError:
-                raise ValueError(f"Invalid MQTT version: '{version}'. Defaulting to client default.")
+                raise ValueError(
+                    f"Invalid MQTT version: '{version}'. Defaulting to client default."
+                )
+
         def _get_ssl_protocol(protocol: str):
             try:
                 return getattr(ssl, f"PROTOCOL_{protocol}")
             except AttributeError:
-                raise ValueError(f"Invalid SSL protocol: '{protocol}'. Defaulting to client default.")
+                raise ValueError(
+                    f"Invalid SSL protocol: '{protocol}'. Defaulting to client default."
+                )
 
         self.client = mqtt.Client(
             client_id=args.mqtt_client_id,
@@ -524,7 +533,9 @@ class FastAPIWebSocketOutput(OutputHandler):
 
 class DetectionApp:
     def __init__(self, args):
-        self.model = DetectionModel(args.model, args.model_dir, args.export_dir, args.device)
+        self.model = DetectionModel(
+            args.model, args.model_dir, args.export_dir, args.device
+        )
         self.source = FrameSource(args.source, args.frame_interval)
         self.args = args
         self.stop_processing: bool = False
@@ -709,18 +720,19 @@ def parse_args():
     )
     args = parser.parse_args()
     if args.device != "cpu" and not torch.cuda.is_available():
-        logging.warning(
-            "CUDA is not available. Falling back to CPU for computation."
-        )
+        logging.warning("CUDA is not available. Falling back to CPU for computation.")
         args.device = "cpu"
     return args
+
 
 def main():
     unhandled_exit.activate()
 
     args = parse_args()
     for logger_name in ["root", *logging.root.manager.loggerDict.keys()]:
-        logging.getLogger(logger_name).setLevel(logging.getLevelName(args.log_level.upper()))
+        logging.getLogger(logger_name).setLevel(
+            logging.getLevelName(args.log_level.upper())
+        )
 
     async def run():
         app = DetectionApp(args)
@@ -730,6 +742,7 @@ def main():
             await app.stop()
 
     asyncio.run(run())
+
 
 if __name__ == "__main__":
     main()
