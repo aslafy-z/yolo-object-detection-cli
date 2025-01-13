@@ -26,13 +26,14 @@ from ultralytics.data import load_inference_source
 from ultralytics.data.utils import IMG_FORMATS
 import torch
 
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from fastapi.responses import HTMLResponse
 import uvicorn
 
+import ssl
 import paho.mqtt.client as mqtt
+
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -89,7 +90,9 @@ class DetectionModel:
         try:
             is_gpu = device != "cpu"
             model_path = Path(model_dir) / model
-            exported_model_path = Path(export_dir) / model_path.with_suffix('.engine').name
+            exported_model_path = (
+                Path(export_dir) / model_path.with_suffix(".engine").name
+            )
 
             if is_gpu and not Path(exported_model_path).exists():
                 logging.info(f"Exporting model for GPU usage: {exported_model_path}")
@@ -100,7 +103,9 @@ class DetectionModel:
                 shutil.move(temp_export_path, exported_model_path)
 
             self.model = YOLO(exported_model_path if is_gpu else model_path)
-            logging.info(f"Successfully loaded model from {exported_model_path if is_gpu else model_path}")
+            logging.info(
+                f"Successfully loaded model from {exported_model_path if is_gpu else model_path}"
+            )
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
             raise RuntimeError(f"Error initializing YOLO model: {e}")
@@ -284,18 +289,60 @@ class OutputHandler(ABC):
 
 class MQTTOutput(OutputHandler):
     def __init__(self, args: argparse.Namespace):
-        self.client = mqtt.Client()
+        def _get_mqtt_version(version: str):
+            try:
+                return mqtt.MQTTProtocolVersion[version].value
+            except KeyError:
+                logging.warning(
+                    f"Invalid MQTT version: '{version}'. Defaulting to client default."
+                )
+                return None
+
+        def _get_ssl_protocol(protocol: str):
+            try:
+                return getattr(ssl, f"PROTOCOL_{protocol}")
+            except AttributeError:
+                logging.warning(
+                    f"Invalid SSL protocol: '{protocol}'. Defaulting to client default."
+                )
+                return None
+
+        self.client = mqtt.Client(
+            client_id=args.mqtt_client_id,
+            protocol=_get_mqtt_version(args.mqtt_protocol),
+        )
+        self.client.tls_set(
+            ca_certs=args.mqtt_tls_ca_cert,
+            certfile=args.mqtt_tls_client_cert,
+            keyfile=args.mqtt_tls_client_key,
+            keyfile_password=args.mqtt_tls_client_key_password,
+            cert_reqs=ssl.CERT_REQUIRED if args.mqtt_tls_ca_cert else ssl.CERT_NONE,
+            tls_version=_get_ssl_protocol(args.mqtt_tls_version),
+            ciphers=None,  # use defaults
+            alpn_protocols=[args.mqtt_tls_alpn_protocol],
+        )
+        if args.mqtt_username and args.mqtt_password:
+            self.client.username_pw_set(args.mqtt_username, args.mqtt_password)
         self.topic = args.mqtt_topic
-        self.client.connect(args.mqtt_host, args.mqtt_port, 60)
+        status = self.client.connect(args.mqtt_host, args.mqtt_port, 60)
+        if status == 0:
+            logging.info(f"Connected to MQTT broker at {args.mqtt_host}:{args.mqtt_port}")
+        else:
+            logging.error(f"Failed to connect to MQTT broker: {status}")
+            raise RuntimeError(f"Failed to connect to MQTT broker: {status}")
         self.client.loop_start()
 
     async def publish(self, frame: Frame):
+        if not self.client.is_connected():
+            logging.warning("MQTT client is not connected.")
+            return
         message = {"timestamp": frame.timestamp, "detections": frame.detections}
         self.client.publish(self.topic, json.dumps(message, cls=EnhancedJSONEncoder))
 
     async def terminate(self):
+        if self.client.is_connected():
+            self.client.disconnect()
         self.client.loop_stop()
-        self.client.disconnect()
 
 
 class ConsoleOutput(OutputHandler):
@@ -499,7 +546,9 @@ class FastAPIWebSocketOutput(OutputHandler):
 
 class DetectionApp:
     def __init__(self, args):
-        self.model = DetectionModel(args.model, args.model_dir, args.export_dir, args.device)
+        self.model = DetectionModel(
+            args.model, args.model_dir, args.export_dir, args.device
+        )
         self.source = FrameSource(args.source, args.frame_interval)
         self.args = args
         self.stop_processing: bool = False
@@ -611,6 +660,66 @@ def parse_args():
         help="MQTT topic to publish detections (default: 'detections').",
     )
     parser.add_argument(
+        "--mqtt-client-id",
+        type=str,
+        default=None,
+        help="MQTT client ID (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-protocol",
+        type=str,
+        default="MQTTv311",
+        help="MQTT protocol version (default: 'MQTTv311'). Options: 'MQTTv31', 'MQTTv311', 'MQTTv5'.",
+    )
+    parser.add_argument(
+        "--mqtt-username",
+        type=str,
+        default=None,
+        help="MQTT username (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-password",
+        type=str,
+        default=None,
+        help="MQTT password (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-ca-cert",
+        type=str,
+        default=None,
+        help="Path to CA certificate file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-cert",
+        type=str,
+        default=None,
+        help="Path to client certificate file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-key",
+        type=str,
+        default=None,
+        help="Path to client key file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-client-key-password",
+        type=str,
+        default=None,
+        help="Password for client key file for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
+        "--mqtt-tls-version",
+        type=str,
+        default="TLSv1_2",
+        help="TLS version for MQTT connection (default: 'TLSv1_2'). Options: 'TLSv1', 'TLSv1_1', 'TLSv1_2', 'TLSv1_3'.",
+    )
+    parser.add_argument(
+        "--mqtt-tls-alpn-protocol",
+        type=str,
+        default=None,
+        help="ALPN protocol for MQTT TLS connection (default: None).",
+    )
+    parser.add_argument(
         "--http",
         action="store_true",
         default=True,
@@ -636,18 +745,19 @@ def parse_args():
     )
     args = parser.parse_args()
     if args.device != "cpu" and not torch.cuda.is_available():
-        logging.warning(
-            "CUDA is not available. Falling back to CPU for computation."
-        )
+        logging.warning("CUDA is not available. Falling back to CPU for computation.")
         args.device = "cpu"
     return args
+
 
 def main():
     unhandled_exit.activate()
 
     args = parse_args()
     for logger_name in ["root", *logging.root.manager.loggerDict.keys()]:
-        logging.getLogger(logger_name).setLevel(logging.getLevelName(args.log_level.upper()))
+        logging.getLogger(logger_name).setLevel(
+            logging.getLevelName(args.log_level.upper())
+        )
 
     async def run():
         app = DetectionApp(args)
@@ -657,6 +767,7 @@ def main():
             await app.stop()
 
     asyncio.run(run())
+
 
 if __name__ == "__main__":
     main()

@@ -50,6 +50,12 @@ python main.py --source=samples/data/shop.mp4
 
 ## Development
 
+### Format
+
+```shell
+uvx ruff format
+```
+
 ### Lock dependencies
 
 ```shell
