@@ -46,6 +46,7 @@ source ./venv/bin/activate
 pip install -r requirements.txt
 
 python main.py --source=samples/data/shop.mp4
+python main.py --source=rtsp://user:pass@10.0.0.5/Src/MediaInput/stream_1
 ```
 
 ## Development
