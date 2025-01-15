@@ -82,19 +82,22 @@ class Frame:
 
 
 class DetectionModel:
-    def __init__(self, model: str, model_dir: str, export_dir: str, device: str):
+    def __init__(self, model: str, model_precision: str, model_dir: str, model_export_dir: str, device: str):
         logging.info(f"Cuda is available: {torch.cuda.is_available()}")
         self.track_history = defaultdict(lambda: [])
 
         try:
             is_gpu = device != "cpu"
             model_path = Path(model_dir) / model
-            exported_model_path = Path(export_dir) / model_path.with_suffix('.engine').name
+            exported_model_path = Path(model_export_dir) / model_path.with_suffix(f'_{model_precision}.engine').name
 
             if is_gpu and not Path(exported_model_path).exists():
                 logging.info(f"Exporting model for GPU usage: {exported_model_path}")
                 temp_export_path = YOLO(model_path).export(
-                    format="engine", device=device, half=True
+                    format="engine",
+                    device=device,
+                    half=(model_precision == "fp16"),
+                    int8=(model_precision == "int8"),
                 )
                 os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
                 shutil.move(temp_export_path, exported_model_path)
@@ -499,7 +502,7 @@ class FastAPIWebSocketOutput(OutputHandler):
 
 class DetectionApp:
     def __init__(self, args):
-        self.model = DetectionModel(args.model, args.model_dir, args.export_dir, args.device)
+        self.model = DetectionModel(args.model, args.model_precision, args.model_dir, args.model_export_dir, args.device)
         self.source = FrameSource(args.source, args.frame_interval)
         self.args = args
         self.stop_processing: bool = False
@@ -567,7 +570,7 @@ def parse_args():
         help="Path to the directory containing the model weights file (default: './weights').",
     )
     parser.add_argument(
-        "--export-dir",
+        "--model-export-dir",
         type=str,
         default="./weights-optimized",
         help="Path to export the optimized model engine file (default: './weights-optimized'). Used for GPU acceleration.",
@@ -577,6 +580,12 @@ def parse_args():
         type=str,
         default="yolo11n.pt",
         help="Path to the model weights file (default: 'yolo11n.pt'). Model will be downloaded if not found.",
+    )
+    parser.add_argument(
+        "--model-precision",
+        type=str,
+        default="fp16",
+        help="Model precision for inference (default: 'fp16'). Options: 'fp32', 'fp16', 'int8'.",
     )
     parser.add_argument(
         "--frame-interval",
