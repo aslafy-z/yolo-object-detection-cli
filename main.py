@@ -94,7 +94,11 @@ class DetectionModel:
             if is_gpu and not Path(exported_model_path).exists():
                 logging.info(f"Exporting model for GPU usage: {exported_model_path}")
                 temp_export_path = YOLO(model_path).export(
-                    format="engine", device=device, half=True
+                    format="engine",
+                    device=device,
+                    half=True,
+                    # Workaround https://github.com/ultralytics/ultralytics/issues/18655
+                    simplify=False,
                 )
                 os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
                 shutil.move(temp_export_path, exported_model_path)
