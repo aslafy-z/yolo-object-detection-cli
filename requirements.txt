@@ -59,7 +59,7 @@ networkx==3.1
     # via
     #   scikit-image
     #   torch
-numpy==1.23.5
+numpy==2.2.2
     # via
     #   yolo-object-detection-cli (pyproject.toml)
     #   contourpy
