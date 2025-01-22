@@ -89,7 +89,7 @@ class DetectionModel:
         try:
             is_gpu = device != "cpu"
             model_path = Path(model_dir) / model
-            exported_model_path = Path(model_export_dir) / model_path.with_suffix(f'_{model_precision}.engine').name
+            exported_model_path = Path(model_export_dir) / model_path.with_suffix(f'.{model_precision}.engine').name
 
             if is_gpu and not Path(exported_model_path).exists():
                 logging.info(f"Exporting model for GPU usage: {exported_model_path}")
@@ -102,7 +102,9 @@ class DetectionModel:
                 os.makedirs(os.path.dirname(exported_model_path), exist_ok=True)
                 shutil.move(temp_export_path, exported_model_path)
 
-            self.model = YOLO(exported_model_path if is_gpu else model_path)
+            self.model = YOLO(
+                model=exported_model_path if is_gpu else model_path,
+            )
             logging.info(f"Successfully loaded model from {exported_model_path if is_gpu else model_path}")
         except Exception as e:
             logging.error(f"Failed to load YOLO model: {e}")
