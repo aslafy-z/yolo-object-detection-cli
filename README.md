@@ -55,7 +55,7 @@ python main.py --source=rtsp://user:pass@10.0.0.5/Src/MediaInput/stream_1
 
 ```shell
 uv lock
-uv pip compile pyproject.toml -o requirements.txt
+uv export --locked --format requirements-txt > requirements.txt
 ```
 
 > Note: Docker image uses a subset of the dependencies, see in `requirements.docker.txt`.
