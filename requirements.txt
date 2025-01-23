@@ -92,7 +92,7 @@ nvidia-cudnn-cu12==8.9.2.26
     # via torch
 nvidia-cufft-cu12==11.0.2.54
     # via torch
-nvidia-curand-cu12==10.3.2.106
+nvidia-curand-cu12==10.3.9.55
     # via torch
 nvidia-cusolver-cu12==11.4.5.107
     # via torch
