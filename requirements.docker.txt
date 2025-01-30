@@ -1,5 +1,5 @@
 uvicorn[standard]==0.32.1
-fastapi==0.103.2 # Downgrade to support typing-extensions requirements
+fastapi==0.115.8 # Downgrade to support typing-extensions requirements
 typing-extensions==4.5.0 # Downgrade to support fastapi and ultralytics requirements
 # Use opencv-python from base image
 # Use numpy from base image
