@@ -108,7 +108,7 @@ nvidia-nvjitlink-cu12==12.6.85
     #   nvidia-cusparse-cu12
 nvidia-nvtx-cu12==12.1.105
     # via torch
-onnx==1.17.0
+onnx==1.22.0
     # via onnxslim
 onnxslim==0.1.46
     # via yolo-object-detection-cli (pyproject.toml)
