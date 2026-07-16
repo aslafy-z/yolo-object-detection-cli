@@ -212,7 +212,7 @@ ultralytics-thop==2.0.13
     # via ultralytics
 unhandled-exit==1.0.0
     # via yolo-object-detection-cli (pyproject.toml)
-urllib3==2.2.3
+urllib3==2.7.0
     # via requests
 uvicorn==0.32.1
     # via yolo-object-detection-cli (pyproject.toml)
