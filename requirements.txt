@@ -7,7 +7,7 @@ anyio==3.7.1
     #   watchfiles
 certifi==2024.12.14
     # via requests
-charset-normalizer==3.4.1
+charset-normalizer==3.5.1
     # via requests
 click==8.1.8
     # via uvicorn
