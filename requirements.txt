@@ -141,7 +141,7 @@ psutil==6.1.1
     # via ultralytics
 py-cpuinfo==9.0.0
     # via ultralytics
-pydantic==1.10.19
+pydantic==1.10.26
     # via fastapi
 pyparsing==3.1.4
     # via matplotlib
