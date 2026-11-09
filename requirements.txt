@@ -27,7 +27,7 @@ fonttools==4.55.3
     # via matplotlib
 fsspec==2024.12.0
     # via torch
-h11==0.14.0
+h11==0.16.0
     # via uvicorn
 httptools==0.6.4
     # via uvicorn
